@@ -53,6 +53,7 @@ Pandora's bold, editorial style clashes with the precision and utility of an adm
 | Bold agency site | Pandora UI |
 | SaaS marketing page | Default |
 | Seasonal promo page | Autumn |
+| Content site or docs | Notion |
 
 ---
 

@@ -93,6 +93,8 @@ This is the single highest-leverage action. Windframe's output quality scales di
 
 ## Step 3: Select Style and Theme
 
+**IMPORTANT:** Before calling `generate_design`, you MUST read the available styles from `windframe://styles` and themes from `windframe://themes`, present the options to the user, and explicitly ask them to choose a style and theme. Do not assume defaults or proceed without user confirmation.
+
 Read [references/styles.md](references/styles.md) for the full guide. Quick reference:
 
 | Style | Best for | Visual character |
@@ -231,5 +233,5 @@ Before presenting output to the user, check:
 
 The server exposes two read-only resources — call these to get current data programmatically:
 
-- **`windframe://styles`** — JSON object with all 5 styles, descriptions, and best-use cases
+- **`windframe://styles`** — JSON object with all 7 styles, descriptions, and best-use cases
 - **`windframe://themes`** — JSON array of all 22 color themes with Tailwind prefix names

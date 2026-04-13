@@ -13,7 +13,7 @@ Complete parameter specs, usage patterns, and examples for all three Windframe t
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `prompt` | string | ✅ | Detailed description of the UI to generate |
-| `uiStyle` | enum | ✅ | Visual style — one of 5 options (see below) |
+| `uiStyle` | enum | ✅ | Visual style — one of 7 options (see below) |
 | `theme` | string | ✅ | Tailwind color name (e.g. `"blue"`, `"slate"`, `"rose"`) |
 
 **`uiStyle` values:** `"Default"` | `"Linear UI"` | `"ShadCN UI"` | `"Pandora UI"` | `"Autumn"` | `"Enterprise"` | `"Notion"`

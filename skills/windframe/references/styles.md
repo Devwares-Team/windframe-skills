@@ -4,7 +4,7 @@ Choosing the wrong style is the single most common mistake. A great prompt with 
 
 ---
 
-## The 5 UI Styles
+## The 7 UI Styles
 
 ### Default
 **Character:** Modern, minimal, confident. Dual light/dark mode. Gradient blob backgrounds. Generous whitespace. Neutral palette with a colored accent.
@@ -281,7 +281,7 @@ What are you building?
 
 Ask before generating if the project context doesn't make the choice obvious. One question is enough:
 
-> "What style fits best — clean SaaS marketing (Default), dark developer-grade (Linear UI), component-precise (ShadCN UI), bold editorial (Pandora UI), refined enterprise product (Enterprise), or content-first workspace (Notion)?"
+> "What style fits best — clean SaaS marketing (Default), dark developer-grade (Linear UI), component-precise (ShadCN UI), bold editorial (Pandora UI), warm seasonal (Autumn), refined enterprise product (Enterprise), or content-first workspace (Notion)?"
 
 If asking is impractical (batch generation, automated context), apply these defaults:
 
@@ -305,5 +305,9 @@ Each style has a strong internal logic. When writing prompts for a given style, 
 **For ShadCN UI:** Use "dashboard", "panel", "table", "form", "sidebar". Avoid "hero", "blob", "gradient background".
 
 **For Default:** You can use "hero", "gradient", "light/dark", "marketing", "conversion". Most prompts work well here.
+
+**For Enterprise:** Use "operational", "workflow", "dense", "Roobert font", "border-led". Avoid "hero", "marketing", "bold colors".
+
+**For Notion:** Use "content-first", "neutral", "doodle illustrations", "black CTAs", "workspace". Avoid "hero", "marketing", "colorful".
 
 **For Autumn:** Use "warm", "seasonal", "cozy", "earthy". Avoid anything that sounds cold or technical.
