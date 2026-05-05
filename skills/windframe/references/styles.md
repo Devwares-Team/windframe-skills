@@ -1,6 +1,8 @@
 # Windframe MCP — Style & Theme Selection Guide
 
-Choosing the wrong style is the single most common mistake. A great prompt with the wrong style produces a technically correct but tonally wrong result. Read this before every `generate_design` or `convert_design_style` call.
+Choosing the wrong style is the single most common mistake. A great prompt with the wrong style produces a technically correct but tonally wrong result. Read this before every `fetch_style_design_context` or `fetch_style_conversion_context` call.
+
+**Note:** These tools return style context (via resource URI), not HTML. The MCP client uses this context to generate framework-specific UI code (React, Vue, Svelte, etc.).
 
 ---
 
@@ -274,6 +276,8 @@ What are you building?
 | Autumn | `amber`, `orange`, `stone` | `blue`, `cyan`, `slate` |
 | Enterprise | `zinc`, `slate`, `neutral`, `gray` | `orange`, `pink`, `lime` |
 | Notion | `neutral`, `zinc`, `slate`, `gray` | `orange`, `pink`, `fuchsia` |
+
+**Theme options:** Tailwind color name (e.g., `"blue"`), `"current"` to use project primary color, or custom hex code (e.g., `"#3b82f6"`).
 
 ---
 
