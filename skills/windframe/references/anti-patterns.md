@@ -1,152 +1,157 @@
-# Windframe MCP — Anti-Patterns & Common Mistakes
+# Windframe MCP Anti-Patterns
 
-What goes wrong, why it goes wrong, and exactly how to fix it.
-
----
-
-## Prompt Anti-Patterns
-
-### 1. The Vague Brief
-The #1 cause of generic output. If your prompt could describe any website, it will produce any website.
-
-❌ **Bad:**
-```
-"A landing page for a startup"
-"A dashboard"
-"A company website"
-"A pricing page"
-```
-
-✅ **Fix:** Name the product, the audience, every section, and key copy direction.
-```
-"A landing page for a B2B contract management SaaS targeting legal teams at mid-size companies.
-Hero: headline 'Sign faster, dispute less', subheadline about e-signature + audit trails,
-CTA 'Request a demo'. Features: 4-column grid — Smart templates, e-Signatures, Audit logs,
-Team permissions. Testimonials from 2 General Counsels. Pricing: Starter $99/mo, Business
-$299/mo, Enterprise (custom). Security badges: SOC 2, GDPR, ISO 27001."
-```
+Use this checklist to avoid behavior that violates the Windframe MCP workflow.
 
 ---
 
-### 2. Forgetting Style Context is Not UI Code
-The tools return style context (via resource URI), not HTML/JSX/Vue code. The MCP client must read the resource and generate the actual UI code.
+## Choosing Style Or Color For The User
 
-❌ **Bad:**
-```
-// Tool returns resource URI
-// Agent pastes the JSON context directly to user
-```
+Bad:
 
-✅ **Fix:** Read the resource URI and use the context to generate framework-specific code:
-```
-1. Receive resource_uri: "windframe://style-context/{id}"
-2. Read the resource to get JSON context
-3. Generate React/Vue/Svelte/HTML code using that context
-```
-
----
-
-### 3. Missing Style or Color Selection
-Starting generation without letting the user choose style and primary color.
-
-❌ **Bad:**
 ```json
-// Calling fetch_style_design_context without uiStyle or primaryColor
-// Hoping the server will guess correctly
+{
+  "uiStyle": "[hard-coded style]",
+  "primaryColor": "[hard-coded color]"
+}
 ```
 
-✅ **Fix:** Always read `windframe://styles` and `windframe://themes` first, present options to user, and get explicit confirmation. If you skip this, the server will either:
-- Prompt the user via elicitation form (if client supports it)
-- Return `user_input_required` error (if client doesn't support elicitation)
+when the user did not choose those values.
+
+Fix:
+
+1. Read `windframe://styles`.
+2. Read `windframe://themes`.
+3. Recommend suitable pairings.
+4. Ask the user to choose `uiStyle` and `primaryColor`.
+5. Retry or call the tool with the selected values.
 
 ---
 
+## Skipping The Option Resources
 
-### 4. Overloading a Single Conversion
-Requesting too many changes in one `fetch_style_conversion_context` call.
+Bad:
 
-❌ **Bad:**
-```
-"Convert this page to Linear UI, change the headline, add testimonials,
-fix the navbar, and make it mobile responsive"
+```text
+Use a fixed style for a fixed UI category without checking the live resource data.
 ```
 
-✅ **Fix:** Do the content changes first with one tool call, then do the style conversion separately:
-1. Use `fetch_style_design_context` for new content
-2. Use `fetch_style_conversion_context` for style changes
+without checking what the server currently exposes.
+
+Fix:
+
+Treat `windframe://styles` and `windframe://themes` as authoritative. Local docs can guide recommendations, but resource output controls what can be offered.
 
 ---
 
-### 5. Ignoring the Pro Plan Requirement
-Trying to use `fetch_style_design_context` or `fetch_style_conversion_context` without a Pro plan.
+## Treating Style Context As Finished Code
 
-❌ **Bad:**
-```
-// Calling fetch_style_design_context when user is on Free plan
-// Tool returns: { "error": "pro_plan_required", "message": "..." }
+Bad:
+
+```text
+Here is your result: windframe://style-context/12345
 ```
 
-✅ **Fix:** If you receive `pro_plan_required` error, direct the user to upgrade:
+Fix:
+
+Read `windframe://style-context/{context_id}` and use the returned style context to generate or convert UI code in the user's project framework.
+
+---
+
+## Using The Wrong Parameter Name
+
+Bad:
+
+```json
+{
+  "theme": "[selected color]"
+}
 ```
-"This feature requires a Pro plan. Upgrade at https://windframe.dev/pricing"
+
+with `fetch_style_design_context` or `fetch_style_conversion_context`.
+
+Fix:
+
+Use `primaryColor`:
+
+```json
+{
+  "primaryColor": "[user-selected theme, current, or custom hex]"
+}
 ```
 
 ---
 
-### 6. Not Reading the Resource URI
-Receiving a resource URI but never reading it to get the actual style context.
+## Vague Prompts
 
-❌ **Bad:**
-```
-// Receive: { "resource_uri": "windframe://style-context/12345" }
-// Agent: "Here's your style context: windframe://style-context/12345"
+Bad:
+
+```text
+A landing page for a startup.
 ```
 
-✅ **Fix:** Always read the resource to get the JSON context:
-```
-Read the resource at windframe://style-context/12345
-// Then use that context to generate UI code
+Fix:
+
+Include product, audience, goal, sections, copy direction, CTAs, content counts, interactions, and constraints:
+
+```text
+A landing page for a B2B contract management SaaS targeting legal teams. Hero headline: "Sign faster, dispute less". Sections: hero with demo CTA, 4 feature cards, security proof, 2 testimonials, 3-tier pricing, FAQ, footer.
 ```
 
 ---
 
-## Output Anti-Patterns
+## Overloading A Conversion
 
-### Placeholder content
-The generated UI should never contain:
-- "Lorem ipsum" — unless the user explicitly asked for filler text
-- `[Insert text here]` or `{{placeholder}}`
-- Generic company names like "Acme Corp" unless given no brand name
+Bad:
 
-If the prompt was specific enough, the output will have real copy. If placeholders appear, the prompt lacked content direction.
-
-**Fix:** Add explicit copy direction to the prompt:
-```
-"Hero headline: 'Automate your deployment pipeline'. Subheadline: 
-'From push to production in under 5 minutes, without the ops overhead.'
-CTA: 'Start for free'. Secondary CTA: 'View documentation'."
+```text
+Convert this dashboard to a specific style, rewrite the product positioning, add pricing, change the nav, and create a mobile app screen.
 ```
 
-### Framework Mismatch
-Generating React JSX when the project uses Vue, or vice versa.
+Fix:
 
-**Fix:** Check the project's framework before generating code:
-- `.jsx`/`.tsx` files → React
-- `.vue` files → Vue
-- `.svelte` files → Svelte
-- Otherwise → HTML with Tailwind CDN
+Separate content changes from style conversion. First clarify or update the UI structure, then use `fetch_style_conversion_context` for the selected target style and color.
 
 ---
 
-## Authentication Anti-Patterns
+## Ignoring Plan Or Credit Errors
 
-### Re-running auth every session
-OAuth tokens are stored locally and refreshed automatically (1-hour access tokens, 30-day refresh tokens). You don't need to re-authenticate each session.
+If the tool returns `pro_plan_required`, tell the user the feature requires Windframe Pro and provide `https://windframe.dev/pricing`.
 
-**Only re-authenticate if:**
-- The tool returns a `401 Unauthorized` error
-- The user explicitly disconnects the MCP server
-- More than 30 days have passed since last use
+If the tool returns `free_pass_expired`, tell the user their free calls are exhausted and provide `https://windframe.dev/pricing`.
 
-### Treating the auth URL as a tool parameter
-Authentication happens at the MCP transport layer — not inside tool calls. You never pass API keys, tokens, or credentials into the tools.
+Do not keep retrying the same call without resolving the account state.
+
+---
+
+## Leaving Placeholder Content
+
+Avoid final UI with:
+
+- `Lorem ipsum`
+- `[Insert text here]`
+- `{{placeholder}}`
+- Generic company names when the user provided a real product name
+
+If the user did not provide copy, write reasonable copy from their brief and state any assumptions.
+
+---
+
+## Framework Mismatch
+
+Do not generate React in a Vue project, Vue in a Svelte project, or static HTML inside an existing component app unless the user requested it.
+
+Check project files before writing:
+
+- `.jsx` or `.tsx`: React
+- `.vue`: Vue
+- `.svelte`: Svelte
+- `app/`, `pages/`, or `next.config.*`: Next.js
+- Otherwise, ask or generate framework-neutral HTML only if appropriate
+
+---
+
+## Auth Misuse
+
+Authentication happens through MCP OAuth. Do not ask the user for tokens. Do not pass credentials into tool calls.
+
+Only revisit authentication if the MCP server is missing, disconnected, or returns an authorization error.

@@ -1,28 +1,62 @@
-# Windframe MCP — Tool Reference
+# Windframe MCP Tool Reference
 
-Complete parameter specs, usage patterns, and examples for Windframe MCP tools.
+This reference describes the MCP surface used by the Windframe skill. The MCP resources are the source of truth for available UI styles and color themes.
+
+---
+
+## Resources
+
+### `windframe://styles`
+
+Returns the currently available Windframe UI styles.
+
+Use this before every design or conversion tool call. Present these live styles to the user and recommend only from the returned data.
+
+### `windframe://themes`
+
+Returns the currently available Tailwind CSS color themes.
+
+The server currently returns an array of objects:
+
+The exact values are backend-controlled and can change over time.
+
+Use this before every design or conversion tool call. Present practical options to the user and recommend likely matches.
+
+### `windframe://style-context/{context_id}`
+
+Returns the full style context after `fetch_style_design_context` or `fetch_style_conversion_context`.
+
+Always read this resource before generating or converting UI code. The tool response only gives the URI; it does not contain the full style context.
 
 ---
 
 ## Tool: `fetch_style_design_context`
 
-**When to use:** Starting a new UI design. Returns style context for the MCP client to generate framework-specific code.
+Use this tool when the user wants a new UI component or page.
 
-**Plan required:** Pro
+The tool fetches style context from Windframe. The MCP client then uses that context to generate code in the user's project framework.
 
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `prompt` | string | ✅ | Description of the UI component or page to design |
-| `uiStyle` | enum | ❌* | Visual style — one of 7 options (see below) |
-| `primaryColor` | string | ❌* | Tailwind color name, `"current"` for project color, or hex code |
+| `prompt` | string | Yes | Specific description of the UI component or page to design |
+| `uiStyle` | string | Required by this skill | User-selected style from `windframe://styles` |
+| `primaryColor` | string | Required by this skill | User-selected Tailwind theme name, `"current"`, or custom hex code |
 
-*`uiStyle` and `primaryColor` are optional. If omitted, the server will interactively prompt the user via elicitation form (if client supports it). Clients that don't support elicitation receive a `user_input_required` error.
+The server can attempt interactive elicitation if `uiStyle` or `primaryColor` are omitted. The skill should still read the resources and ask the user to choose first, then call the tool with explicit values.
 
-**`uiStyle` values:** `"Default"` | `"Linear UI"` | `"ShadCN UI"` | `"Pandora UI"` | `"Autumn"` | `"Enterprise"` | `"Notion"`
+### Example
 
-### Response Shape
+```json
+{
+  "prompt": "A SaaS analytics landing page for finance teams. Hero headline: 'Close the books with confidence'. Sections: hero with two CTAs, 4 feature cards, security proof, pricing table, FAQ, footer.",
+  "uiStyle": "[user-selected style from windframe://styles]",
+  "primaryColor": "[user-selected theme, current, or custom hex]"
+}
+```
+
+### Response
 
 ```json
 {
@@ -32,102 +66,76 @@ Complete parameter specs, usage patterns, and examples for Windframe MCP tools.
 }
 ```
 
-### How to Use the Response
-
-1. Read the resource URI: `windframe://style-context/{id}`
-2. The resource contains the style context in JSON format
-3. Use that context to generate UI code in the project's framework (React, Vue, Svelte, etc.)
-
-### Example Calls
-
-**Landing page (Default style):**
-```json
-{
-  "prompt": "A SaaS analytics platform landing page. Hero: headline 'Turn data into decisions', subheadline about real-time dashboards, CTA 'Start free trial'. Features: 3-column grid — Live dashboards, AI insights, Team sharing. Social proof: logos of 5 companies. Pricing: Free (3 dashboards), Pro ($49/mo, unlimited), Enterprise (custom). Footer with links.",
-  "uiStyle": "Default",
-  "primaryColor": "indigo"
-}
-```
-
-**Developer tool (Linear UI style):**
-```json
-{
-  "prompt": "A CLI tool homepage for developers. Dark hero with monospace font, terminal animation showing the tool in action, single CTA 'npm install -g mytool'. Below: 3 feature blocks with code snippets. GitHub star count badge. Installation guide section.",
-  "uiStyle": "Linear UI",
-  "primaryColor": "slate"
-}
-```
+Read `resource_uri` next.
 
 ---
 
 ## Tool: `fetch_style_conversion_context`
 
-**When to use:** Converting an existing UI to a different visual style while keeping the same content structure.
-
-**Plan required:** Pro
+Use this tool when the user wants to convert an existing UI component or page to a different Windframe style or color theme.
 
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `prompt` | string | ✅ | Description of what is being converted and any specific conversion instructions |
-| `uiStyle` | enum | ❌* | Target visual style |
-| `primaryColor` | string | ❌* | Target color: Tailwind name, `"current"`, or hex code |
+| `prompt` | string | Yes | Description of what is being converted and what should change |
+| `uiStyle` | string | Required by this skill | User-selected target style from `windframe://styles` |
+| `primaryColor` | string | Required by this skill | User-selected Tailwind theme name, `"current"`, or custom hex code |
 
-*`uiStyle` and `primaryColor` are optional. If omitted, the server will prompt interactively via elicitation.
+### Example
 
-### Response Shape
-
-Same as `fetch_style_design_context` — returns a resource URI with the converted style context.
-
-### How to Use the Response
-
-1. Read the resource URI: `windframe://style-context/{id}`
-2. The resource contains the converted style context
-3. Use that context to generate the UI in the new style within the project's framework
-
-### Example Calls
-
-**Light → Dark:**
 ```json
 {
-  "prompt": "Convert this landing page to a dark developer-friendly style",
-  "uiStyle": "Linear UI",
-  "primaryColor": "slate"
+  "prompt": "Convert the current admin dashboard while preserving the sidebar, metrics cards, table, filters, and empty states. Apply the user-selected Windframe style context.",
+  "uiStyle": "[user-selected style from windframe://styles]",
+  "primaryColor": "[user-selected theme, current, or custom hex]"
 }
 ```
 
-**Bold marketing → Clean product:**
-```json
-{
-  "prompt": "Convert this agency site to a clean SaaS product style",
-  "uiStyle": "Default",
-  "primaryColor": "blue"
-}
-```
+The response shape is the same as `fetch_style_design_context`. Read the returned `windframe://style-context/{context_id}` resource before modifying code.
 
 ---
 
-## MCP Resources
+## User Choice Requirement
 
-Two read-only resources — call these when you need to know what options exist:
+Do not select `uiStyle` or `primaryColor` for the user.
 
-### `windframe://styles`
+Correct flow:
 
-Returns JSON with all styles. Use this to present style options to users or to verify a style name.
+1. Read `windframe://styles`.
+2. Read `windframe://themes`.
+3. Present available options.
+4. Recommend up to three pairings based on the user's intent and the live resource data.
+5. Ask the user to choose both `uiStyle` and `primaryColor`.
+6. Call the tool with the chosen values.
 
-### `windframe://themes`
-
-Returns array of all color themes. Use this when you need to present theme options or verify a theme name.
-
-### `windframe://style-context/{id}`
-
-Returns the style context data for client-side framework generation. Access this after receiving a resource URI from `fetch_style_design_context` or `fetch_style_conversion_context`.
+If the tool returns `user_input_required`, ask the user for the missing values and retry with explicit parameters.
 
 ---
 
-## Credits and Plans
+## Errors
 
-- **Pro plan required:** Both `fetch_style_design_context` and `fetch_style_conversion_context` require a Pro plan
-- If `pro_plan_required` error received → direct user to https://windframe.dev/pricing
-- The MCP server handles credit consumption automatically for Pro users
+### `user_input_required`
+
+The client does not support interactive elicitation. Ask the user to choose `uiStyle` and `primaryColor`, then retry.
+
+### `cancelled`
+
+The user cancelled interactive selection. Stop and ask how they want to proceed.
+
+### `pro_plan_required`
+
+The feature requires a Pro plan. Direct the user to `https://windframe.dev/pricing`.
+
+### `free_pass_expired`
+
+The user's free calls have expired. Direct the user to `https://windframe.dev/pricing`.
+
+---
+
+## Important Notes
+
+- These tools return style context, not finished UI code.
+- The MCP client must read the returned resource and generate code in the project framework.
+- `primaryColor` accepts a Tailwind theme name, `"current"` for the project primary color, or a custom hex code such as `"#3b82f6"`.
+- Available style names must come from `windframe://styles`, not from a hard-coded list.

@@ -1,198 +1,183 @@
 ---
 name: windframe
-description: Generate and convert UI components and pages using the Windframe MCP server. Returns style context for the MCP client to generate production-ready UI in your project's framework (React, Vue, Svelte, etc.) using Tailwind CSS. Use when the user asks to build landing pages, dashboards, admin panels, marketing sites, SaaS UIs, or any UI component. Also use when the user asks to change the visual style of an existing design or needs a specific Windframe UI style like Linear UI, ShadCN, or Pandora. Handles installation and authentication automatically if the server is not yet connected.
+description: Use this skill when a user asks to generate, redesign, restyle, or convert web UI components or pages with Windframe MCP. The skill must read Windframe MCP option resources, present available UI styles and color themes to the user, recommend the best choices for the user's intent, and wait for the user to choose before calling Windframe tools with uiStyle and primaryColor. Do not choose the UI style or primary color for the user.
 version: 1.0.0
 user-invocable: true
-argument-hint: "[generate|convert|install]"
 ---
 
-# Windframe MCP — UI Generation Skill
+# Windframe MCP UI Skill
 
-Generate real, production-grade UI with Tailwind CSS in your project's framework. The MCP server provides style context; the MCP client handles the actual UI generation.
+Use Windframe MCP to get style context for production-ready web UI generation or conversion. Windframe provides style guidance through MCP resources; the MCP client generates the actual UI code in the user's project framework.
 
-**The core promise:** Give Windframe a specific description → get style context back → MCP client generates framework-specific UI code.
-
-**Mindset:** The difference between a generic AI-generated page and a great one is almost entirely in the prompt and the style choice. Be specific. Pick the right style for the use case. Iterate deliberately.
+Core rule: never choose `uiStyle` or `primaryColor` on the user's behalf. Read the options from Windframe resources, recommend the best matches, ask the user to select, then call the tool with the selected values.
 
 ---
 
-## Step 0: Check Installation
+## MCP Contract
 
-Before calling any Windframe tool, verify the MCP server is connected.
+The Windframe MCP server is named `windframe-mcp`.
 
-**Check:** Can you see tools named `fetch_style_design_context` and `fetch_style_conversion_context` in your available tools? If yes — proceed.
+Required resources:
 
-**If not connected**, install and authenticate:
+- `windframe://styles` returns the currently available Windframe UI styles.
+- `windframe://themes` returns the currently available Tailwind color themes as objects with `name` and `tailwindPrefix`.
+- `windframe://style-context/{context_id}` returns the full style context after a tool call.
+
+Required tools:
+
+- `fetch_style_design_context` is for a new UI component or page.
+- `fetch_style_conversion_context` is for converting an existing UI to another style.
+
+Both tools return a `resource_uri`. Always read that resource before generating or converting UI code.
+
+---
+
+## Mandatory Workflow
+
+### 1. Confirm The UI Request
+
+Extract the user's intent:
+
+- UI type: page, section, component, dashboard, admin panel, marketing site, etc.
+- Target audience and tone.
+- Required sections, content, interactions, and brand constraints.
+- Project framework and styling stack when available.
+- Whether this is a new design or a conversion/restyle of an existing design.
+
+Ask only for missing details that materially affect the output. Style and color selection are always handled through the Windframe option flow below.
+
+### 2. Read Windframe Options
+
+Before any Windframe tool call, read:
+
+- `windframe://styles`
+- `windframe://themes`
+
+Treat these resources as authoritative. Do not rely on a hard-coded style list when the resources are available.
+
+### 3. Present Options And Recommendations
+
+Show the user a compact selection prompt:
+
+- List the available UI styles from `windframe://styles`.
+- List practical theme options from `windframe://themes`, or group them if the list is long.
+- Recommend up to three style/theme pairings that fit the user's request and the live resource data.
+- Make clear that the user must choose the final `uiStyle` and `primaryColor`.
+
+Do not proceed until the user selects both values.
+
+Example:
+
+> I read the current Windframe options.
+>
+> Available styles: [styles returned by windframe://styles]
+> Available themes: [themes returned by windframe://themes]
+>
+> For your request, I recommend:
+> 1. [live style] + [live theme]: [why it fits the user's intent and any live metadata].
+> 2. [live style] + [live theme]: [why it fits the user's intent and any live metadata].
+>
+> Which style and primary color should I use?
+
+### 4. Build A Specific Prompt
+
+Write a detailed prompt for Windframe. Include:
+
+- Page or component type.
+- Audience and product context.
+- Section-by-section content.
+- Copy direction or exact copy for headings, CTAs, cards, tables, and forms.
+- Interaction or state requirements.
+- Existing UI details when converting.
+
+### 5. Fetch Style Context
+
+For new UI, call `fetch_style_design_context` with:
+
+```json
+{
+  "prompt": "Specific UI brief",
+  "uiStyle": "User-selected style",
+  "primaryColor": "User-selected theme, current, or hex"
+}
+```
+
+For conversion or restyling, call `fetch_style_conversion_context` with:
+
+```json
+{
+  "prompt": "Specific conversion brief",
+  "uiStyle": "User-selected target style",
+  "primaryColor": "User-selected theme, current, or hex"
+}
+```
+
+If a tool returns `user_input_required`, read the error, present the required options to the user, and retry only after the user chooses. Do not fill the missing values yourself.
+
+### 6. Read The Returned Resource
+
+The tool response has this shape:
+
+```json
+{
+  "status": "ready",
+  "resource_uri": "windframe://style-context/{context_id}",
+  "message": "Style context is ready. Access the full context via the resource URI above."
+}
+```
+
+Read `resource_uri`. Use the returned JSON style context to generate or convert UI code in the project framework.
+
+### 7. Generate Or Convert The UI
+
+Use the style context as design guidance. Generate code that fits the user's existing project structure, component patterns, framework, and Tailwind setup.
+
+Do not paste the raw style context as the final result unless the user explicitly asks for it.
+
+---
+
+## Installation And Authentication
+
+Before using Windframe, verify that the MCP server is connected and exposes the required resources and tools.
+
+If it is not connected, add the HTTP MCP server:
 
 ```bash
-# Add the Windframe MCP server (Claude Code CLI)
 claude mcp add --transport http windframe-mcp https://mcp.windframe.dev
 ```
 
-Then restart Claude Code. On first tool call, the OAuth flow triggers automatically — a browser window opens to the Windframe login page. Sign in with your Windframe account (or create one at https://windframe.dev). After login, the token is stored locally and refreshes silently.
-
-**Other clients:**
-
-| Client | Config location | Entry |
-|--------|----------------|-------|
-| Claude Code | `~/.claude.json` | `"mcpServers": { "windframe-mcp": { "type": "http", "url": "https://mcp.windframe.dev" } }` |
-| VS Code | `.vscode/settings.json` | Same structure under `"mcp.servers"` |
-| Cursor | `.cursor/mcp.json` | Same structure under `"mcpServers"` |
-
-> **Auth is automatic.** MCP clients handle the full OAuth 2.0 + PKCE flow. You don't exchange tokens manually — just connect the URL and sign in when prompted.
+Then restart the MCP client if needed. Authentication is handled through OAuth by the MCP transport. On first use, the user signs in through Windframe. Do not pass tokens or credentials into tool calls.
 
 ---
 
-## Step 1: Discover — Know What You're Building
+## Errors
 
-Never generate blind. Settle these before picking a tool:
-
-```
-1. WHAT is this UI?
-   → Page type: landing page, dashboard, admin panel, form, marketing section, component
-
-2. WHO uses it?
-   → Audience shapes tone: developers want density + precision, consumers want warmth + clarity
-
-3. WHAT should it contain?
-   → Sections, components, copy direction (even rough)
-
-4. WHAT visual style fits?
-   → Dark/developer-grade? Minimal/SaaS? Bold/marketing? Warm/seasonal?
-   → Read [references/styles.md](references/styles.md) for the full decision tree
-
-5. WHAT color theme?
-   → Tailwind color name, "current" for project primary, or custom hex code
-   → See [references/styles.md](references/styles.md) § Theme Selection
-```
-
-**Output a generation brief:**
-> "I'm building a **[PAGE TYPE]** for **[AUDIENCE]** using **[STYLE]** style with a **[THEME]** color theme. Key sections: **[SECTION LIST]**."
-
----
-
-## Step 2: Write a Specific Prompt
-
-This is the single highest-leverage action. Windframe's output quality scales directly with prompt specificity.
-
-**The gap between bad and good:**
-
-❌ **Bad:** "A landing page for a SaaS product"
-
-✅ **Good:** "A SaaS landing page for a project management tool targeting remote engineering teams. Hero: bold headline 'Ship without the chaos', subheadline about async-first workflows, two CTAs: 'Start free' (primary, blue) and 'Watch demo' (ghost). Features grid (3 columns): AI task routing, real-time presence, GitHub integration — each with icon, title, 2-line description. Testimonials from 3 CTOs. Pricing: Free, Pro ($29/mo), Team ($99/mo) with feature comparison table. Footer with newsletter signup and social links."
-
-**Specificity checklist before calling `fetch_style_design_context`:**
-- [ ] Page type named explicitly
-- [ ] Sections listed (hero, features, pricing, etc.)
-- [ ] Headline copy direction or actual headline provided
-- [ ] CTA text and hierarchy specified
-- [ ] Key content counts given (3 features, 4 testimonials, 2 pricing tiers)
-- [ ] Any brand constraints mentioned
-
----
-
-## Step 3: Select Style and Theme
-
-**IMPORTANT:** Before calling `fetch_style_design_context`, you MUST read the available styles from `windframe://styles` and themes from `windframe://themes`, present the options to the user, and explicitly ask them to choose a style and theme. Do not assume defaults or proceed without user confirmation.
-
-If `uiStyle` or `primaryColor` are not provided, the server will interactively prompt the user via an elicitation form (if client supports it). Clients that don't support elicitation will receive a `user_input_required` error.
-
-Read [references/styles.md](references/styles.md) for the full guide. Quick reference:
-
-| Style | Best for | Visual character |
-|-------|----------|-----------------|
-| `Default` | SaaS, marketing, landing pages | Clean dual-mode, gradient blobs, generous spacing |
-| `Linear UI` | Dev tools, technical products | Pure dark, Inter font, blur effects, 3D transforms |
-| `ShadCN UI` | Dashboards, admin panels, forms | Mathematical spacing, semantic tokens, focus states |
-| `Pandora UI` | Agency sites, bold marketing, portfolios | High-contrast B&W, bold type, SVG patterns |
-| `Autumn` | Seasonal pages, warm-toned designs | Warm amber/orange palette |
-| `Enterprise` | Operational tools, workflow apps, B2B product UI | Roobert font, `#FAFAFA` canvas, border-led, crisp light/dark parity |
-| `Notion` | Docs, knowledge bases, content-first sites | Neutral-first, Inter bold headings, doodle images, black CTAs |
-
-For theme: pick a Tailwind color name (e.g., `"blue"`), use `"current"` to inherit the project's primary color, or provide a custom hex code (e.g., `"#3b82f6"`). When in doubt — `slate` for neutral/professional, `blue` for trust/SaaS, `violet` for creative, `rose` for warm/consumer.
-
----
-
-## Step 4: Fetch Style Context
-
-Call `fetch_style_design_context` with a rich prompt, chosen style, and primary color. This returns a resource URI containing the style context.
-
-```json
-{
-  "tool": "fetch_style_design_context",
-  "arguments": {
-    "prompt": "Your specific, detailed description",
-    "uiStyle": "Default",
-    "primaryColor": "blue"
-  }
-}
-```
-
-**What comes back:**
-- `status` — "ready" when context is available
-- `resource_uri` — URI to access the style context (e.g., `windframe://style-context/{id}`)
-- `message` — Instructions to read the resource
-
-**Read the resource:**
-The MCP client should read the resource URI to get the full style context, then use that context to generate the UI in the project's framework.
-
-**Note:** These tools require a Pro plan. Free users receive a `pro_plan_required` error with upgrade link to https://windframe.dev/pricing.
-
-> Full parameter docs and advanced examples → [references/tools.md](references/tools.md)
-
----
-
-## Step 5: Convert Style (Optional)
-
-Want to see the same design in a different visual style or color scheme? Use `fetch_style_conversion_context`. No need to regenerate or re-prompt.
-
-```json
-{
-  "tool": "fetch_style_conversion_context",
-  "arguments": {
-    "prompt": "Convert this dashboard to Enterprise UI",
-    "uiStyle": "Enterprise UI",
-    "primaryColor": "slate"
-  }
-}
-```
-
-Use this when:
-- The user wants to explore style options (show 2 variants)
-- The initial style choice wasn't right
-- Switching from a light to dark aesthetic
-
-The tool returns a resource URI with the converted style context. The MCP client then generates the UI in the new style.
+- `user_input_required`: the MCP client cannot elicit interactively. Ask the user to choose `uiStyle` and `primaryColor`, then retry.
+- `cancelled`: the user cancelled interactive selection. Stop and ask how they want to proceed.
+- `pro_plan_required`: tell the user this Windframe feature requires Pro and point them to `https://windframe.dev/pricing`.
+- `free_pass_expired`: tell the user their free calls are exhausted and point them to `https://windframe.dev/pricing`.
 
 ---
 
 ## Quality Gates
 
-Before presenting output to the user, check:
+Before finishing:
 
-- [ ] **Framework-appropriate?** The generated code should match the project's framework (React, Vue, Svelte, etc.)
-- [ ] **All sections present?** Verify every section from the brief appears in the output
-- [ ] **No placeholder content?** Real copy, not "Lorem ipsum" or "[Insert text here]"
-- [ ] **Style coherent?** The visual style matches the brief (dark vs light, minimal vs bold)
-- [ ] **Pro plan check?** If `pro_plan_required` error received, direct user to https://windframe.dev/pricing
+- The style and primary color were chosen by the user.
+- Options came from `windframe://styles` and `windframe://themes`.
+- The returned `windframe://style-context/{context_id}` resource was read.
+- The generated UI matches the user's framework and existing project conventions.
+- Required sections, content, states, and interactions are present.
+- No placeholder content remains unless the user requested placeholders.
+- The result follows the selected Windframe style and theme.
 
 ---
 
-## Resources
+## References
 
 | File | When to read |
 |------|-------------|
-| [references/tools.md](references/tools.md) | Full parameter specs, advanced tool usage |
-| [references/styles.md](references/styles.md) | Style decision tree, theme pairing, when to use which style |
-| [references/anti-patterns.md](references/anti-patterns.md) | What goes wrong and how to avoid it |
-| [references/workflow.md](references/workflow.md) | Complete end-to-end worked example (SaaS landing page) |
-
----
-
-## Available Resources (MCP)
-
-The server exposes resources — call these to get current data programmatically:
-
-- **`windframe://styles`** — JSON object with all 7 styles, descriptions, and best-use cases
-- **`windframe://themes`** — JSON array of all color themes
-- **`windframe://style-context/{id}`** — Style context data for client-side framework generation
+| [references/tools.md](references/tools.md) | Tool parameters, resources, responses, and errors |
+| [references/styles.md](references/styles.md) | Style and theme recommendation guidance |
+| [references/anti-patterns.md](references/anti-patterns.md) | Mistakes to avoid |
+| [references/workflow.md](references/workflow.md) | End-to-end usage example |

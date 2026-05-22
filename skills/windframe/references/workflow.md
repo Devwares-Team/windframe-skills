@@ -1,201 +1,174 @@
-# Windframe MCP — End-to-End Workflow Example
+# Windframe MCP Workflow
 
-A complete walkthrough: SaaS project management tool landing page, from blank slate to iterated final output. Follow this as a template for any generation session.
+This workflow is dynamic. It must work with live style and theme data returned by the Windframe backend through MCP resources.
 
----
-
-## The Brief
-
-> "Build a landing page for **TaskFlow** — a project management SaaS targeting small engineering teams (5-20 people). The brand is clean, modern, trustworthy. We want users to sign up for a free trial."
-
-This is a real-world brief. Vague in some places, specific in others. Here's how to work through it.
+Do not hard-code style names, style descriptions, intent mappings, or default style/color pairings in this workflow.
 
 ---
 
-## Step1: Clarify and Expand the Brief
+## User Request
 
-Before touching any tool, resolve the unknowns. Either ask the user or make defensible assumptions based on context. Document your assumptions.
-
-**What we know:**
-- Product: Project management SaaS
-- Audience: Small engineering teams (5-20 people)
-- Goal: Free trial signups
-- Tone: Clean, modern, trustworthy
-
-**Assumptions made (document these):**
-- Primary CTA: "Start free trial" (no credit card)
-- 3 core features that engineers care about: Sprint planning, GitHub integration, Team velocity charts
-- Pricing: Free (up to 5 users), Pro ($19/user/mo), Team ($14/user/mo billed annually)
-- No existing brand colors specified → will use blue (trust signal for SaaS)
-
-**Generation brief:**
-> "I'm building a **SaaS landing page** for **small engineering teams** using **Default** style with a **blue** color theme. Key sections: Hero with free trial CTA, 3-feature grid, social proof (logos), pricing (3 tiers), FAQ (4 questions), footer."
+> Build a landing page for TaskFlow, a project management SaaS for small engineering teams. It should feel clean, modern, trustworthy, and drive free trial signups.
 
 ---
 
-## Step2: Select Style and Theme
+## 1. Understand The Brief
 
-**Style decision:**
-- SaaS marketing page → Default ✅
-- Not a developer tool (no Linear UI)
-- Not a dashboard (no ShadCN UI)
-- Not bold/editorial agency site (no Pandora UI)
+Extract the important details:
 
-**Theme decision:**
-- Trust + reliability + B2B SaaS → `blue` ✅
+- Product: TaskFlow
+- UI type: landing page
+- Audience: small engineering teams
+- Goal: free trial signups
+- Tone: clean, modern, trustworthy
+- Likely sections: hero, features, social proof, pricing, FAQ, footer
+
+If the project framework is not obvious, inspect the repository before generating code.
 
 ---
 
-## Step3: Write the Generation Prompt
+## 2. Read Live Option Resources
 
-Take the brief and turn it into a rich, specific prompt. Every section gets content direction, not just a section name.
+Read these MCP resources in the active user session:
 
-```
-A SaaS landing page for TaskFlow, a project management tool for small engineering teams.
-
-HERO: Bold headline "Ship sprints, not excuses". Subheadline: "TaskFlow gives engineering teams 
-of 5-20 the sprint planning, GitHub sync, and velocity tracking they actually need — without 
-the enterprise bloat." Two CTAs: "Start free trial" (primary blue button, no credit card) and 
-"Watch 2-min demo" (ghost/outline button). Small trust line below: "Trusted by 1,200+ teams. 
-No setup required."
-
-FEATURES (3-column grid): 
-1. Sprint Planning — "Drag-and-drop sprint boards that update in real time. Plan your next 
-   sprint in minutes, not meetings."
-2. GitHub Integration — "Auto-link PRs to tickets. See commit history, review status, and 
-   deploy state without leaving TaskFlow."
-3. Velocity Charts — "Understand your team's true pace. Predictable sprints, honest estimates, 
-   fewer surprises at standups."
-
-SOCIAL PROOF: "Trusted by teams at" + 5 company logo placeholders (use placeholder rectangles 
-or text logos).
-
-PRICING (3 tiers, monthly):
-- Free: Up to 5 users, 3 active projects, basic reporting. CTA: "Get started free"
-- Pro ($19/user/mo): Unlimited projects, GitHub integration, velocity charts, priority support. 
-  CTA: "Start free trial"  
-- Team ($14/user/mo billed annually): Everything in Pro + admin controls, SSO, SLA. 
-  CTA: "Contact sales"
-Highlight the Pro tier as recommended.
-
-FAQ (4 questions):
-1. "Do I need a credit card to start?" — No, free plan requires no payment info.
-2. "Can I import from Jira or Linear?" — Yes, one-click import available.
-3. "What happens when my team grows past 5 users?" — Automatically prompts to upgrade.
-4. "Is my data secure?" — SOC 2 Type II certified, data encrypted at rest and in transit.
-
-FOOTER: Logo, tagline "Built for builders", nav links (Product, Pricing, Docs, Blog, Status), 
-legal links, "© 2024 TaskFlow Inc".
+```text
+windframe://styles
+windframe://themes
 ```
 
+Use the returned data exactly as the backend provides it.
+
+The style resource may return names only, or it may include metadata such as descriptions, tags, best-use cases, or visual notes. If metadata exists, use it to recommend suitable options. If only names exist, make cautious recommendations from the live names and ask the user to confirm.
+
+The theme resource returns the color options available for `primaryColor`. It may also be valid for the user to choose `"current"` or a custom hex value if supported by the tool.
+
 ---
 
-## Step4: Call `fetch_style_design_context`
+## 3. Present Live Options And Ask
+
+Respond with a compact choice prompt based only on the live resource data.
+
+Template:
+
+```text
+I read the current Windframe options.
+
+Available styles: [style names returned by windframe://styles]
+Available themes: [relevant theme names returned by windframe://themes]
+
+For this request, I recommend:
+1. [live style] + [live theme]: [reason based on the user's request and any live style metadata].
+2. [live style] + [live theme]: [reason based on the user's request and any live style metadata].
+
+Which style and primary color should I use?
+```
+
+Rules:
+
+- Recommend at most three pairings.
+- Do not recommend anything that was not returned by `windframe://styles` or `windframe://themes`, except `"current"` or a valid custom hex color.
+- Do not treat any local example, previous session, or old style name as available.
+- Stop here until the user chooses both `uiStyle` and `primaryColor`.
+
+---
+
+## 4. Build The Windframe Prompt
+
+After the user chooses, write a specific prompt for the selected request.
+
+Example prompt body:
+
+```text
+A landing page for TaskFlow, a project management tool for small engineering teams.
+
+Hero: headline "Ship sprints, not excuses". Subheadline: "TaskFlow gives engineering teams of 5-20 the sprint planning, GitHub sync, and velocity tracking they need without enterprise bloat." CTAs: "Start free trial" and "Watch 2-min demo". Trust line: "Trusted by 1,200+ teams. No setup required."
+
+Features: 3 cards for Sprint Planning, GitHub Integration, and Velocity Charts. Include concise benefit copy for each.
+
+Social proof: logo row for 5 companies.
+
+Pricing: Free, Pro, and Team tiers. Highlight Pro as recommended.
+
+FAQ: 4 questions about credit card requirements, imports, team growth, and security.
+
+Footer: product links, docs, blog, status, legal links, and copyright.
+```
+
+Do not embed hard-coded style guidance in the prompt unless it came from the live style context or the user's chosen style metadata.
+
+---
+
+## 5. Fetch Style Context
+
+Call `fetch_style_design_context` only after the user has chosen both values.
+
+Use the exact selected values:
 
 ```json
 {
-  "tool": "fetch_style_design_context",
-  "arguments": {
-    "prompt": "A SaaS landing page for TaskFlow... [full prompt above]",
-    "uiStyle": "Default",
-    "primaryColor": "blue"
-  }
+  "prompt": "[specific UI prompt]",
+  "uiStyle": "[user-selected style from windframe://styles]",
+  "primaryColor": "[user-selected theme, current, or custom hex]"
 }
 ```
 
-**What comes back:**
+Do not call this tool before the user chooses the style and primary color.
+
+---
+
+## 6. Read The Returned Resource
+
+The tool returns a resource URI:
+
 ```json
 {
   "status": "ready",
-  "resource_uri": "windframe://style-context/1234567890-abc123",
+  "resource_uri": "windframe://style-context/{context_id}",
   "message": "Style context is ready. Access the full context via the resource URI above."
 }
 ```
 
-**Read the resource:**
-```
-Read the resource at windframe://style-context/1234567890-abc123
+Read the returned URI:
+
+```text
+windframe://style-context/{context_id}
 ```
 
-The resource contains the style context in JSON format. Use this context to generate the UI in the project's framework (React, Vue, Svelte, etc.).
+Use the live JSON style context to generate UI code in the user's framework.
 
 ---
 
-## Step5: Generate Framework-Specific UI
+## 7. Generate Code
 
-Using the style context from the resource, generate the UI code in the project's framework:
+Generate code that fits the repository:
 
-- **React:** Create components with Tailwind classes
-- **Vue:** Create SFCs with Tailwind classes  
-- **Svelte:** Create components with Tailwind classes
-- **HTML:** Generate static HTML with Tailwind CDN (if no framework)
+- React or Next.js: components with JSX/TSX and Tailwind classes.
+- Vue: single-file components.
+- Svelte: Svelte components.
+- Static project: HTML with Tailwind only when appropriate.
+
+Verify that the output follows the selected live Windframe style context and primary color, includes all requested sections, and contains real copy.
 
 ---
 
-## Step6: Style Variant (Optional)
+## 8. Conversion Workflow
 
-User says: "I want to see what it would look like in a darker, more developer-y style."
+When the user asks to convert, restyle, or redesign an existing UI:
 
-Use `fetch_style_conversion_context` — same content, different aesthetic:
+1. Inspect the existing UI enough to describe what must be preserved.
+2. Read `windframe://styles` and `windframe://themes` in the active session.
+3. Present live options and recommend at most three pairings from the resource data.
+4. Ask the user to choose `uiStyle` and `primaryColor`.
+5. Call `fetch_style_conversion_context` with the selected values.
+6. Read the returned `windframe://style-context/{context_id}`.
+7. Apply the live style context to the existing UI code.
+
+Example call shape after user choice:
 
 ```json
 {
-  "tool": "fetch_style_conversion_context",
-  "arguments": {
-    "prompt": "Convert this landing page to a dark developer-friendly style",
-    "uiStyle": "Linear UI",
-    "primaryColor": "slate"
-  }
+  "prompt": "Convert the current dashboard while preserving the sidebar, top navigation, KPI cards, filters, data table, pagination, empty states, and responsive behavior. Apply the user-selected Windframe style context.",
+  "uiStyle": "[user-selected style from windframe://styles]",
+  "primaryColor": "[user-selected theme, current, or custom hex]"
 }
-```
-
-Present both variants. Let the user choose. Generate the framework-specific code from the new style context.
-
----
-
-## Pattern Library — Common Page Recipes
-
-Use these as starting prompt frameworks for recurring page types:
-
-### SaaS Landing Page
-```
-[Product name] landing page for [audience].
-Hero: "[headline]", subheadline about [value prop], CTA "[primary]" and "[secondary]".
-Features: [N]-column grid — [feature 1], [feature 2], [feature 3].
-Social proof: logos from [companies or count].
-Pricing: [tier 1 ($X/mo)], [tier 2 ($Y/mo)], [tier 3 (custom/enterprise)].
-FAQ: [N] questions. Footer with [links].
-Style: Default, primaryColor: blue.
-```
-
-### Developer Tool Homepage
-```
-[Tool name] homepage for [developer audience].
-Hero: dark background, monospace headline "[tagline]", install command in a code block,
-single CTA "[CTA text]". Features: [N] items with code snippets. GitHub star count.
-[Documentation | Quick start] section. Style: Linear UI, primaryColor: slate.
-```
-
-### Admin Dashboard
-```
-Admin panel for [product]. Top navbar with logo, search, user avatar dropdown.
-Left sidebar: [nav items]. Main content: [N] stat cards ([metric 1], [metric 2], ...),
-[chart type] for [data], [table name] table with [columns] and pagination.
-Style: ShadCN UI, primaryColor: zinc.
-```
-
-### Agency / Portfolio
-```
-[Agency name] homepage. Full-bleed hero: large serif headline "[headline]", 
-single CTA "[CTA]". Work grid: [N] case studies with cover, client, category tag.
-About: [brief]. Contact form. Style: Pandora UI, primaryColor: neutral.
-```
-
-### Pricing Page
-```
-Standalone pricing page for [product]. Header: "[headline about pricing]".
-Toggle: monthly / annual (annual saves [X]%). [N] pricing tiers:
-[tier 1 - free/starter], [tier 2 - pro/growth], [tier 3 - enterprise].
-Feature comparison table below. FAQ: [N] questions. CTA banner at bottom.
-Style: [match product style], primaryColor: [match product theme].
 ```
