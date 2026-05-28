@@ -1,36 +1,35 @@
 ---
 name: windframe
-description: Use this skill when a user asks to generate, redesign, restyle, or convert web UI components or pages with Windframe MCP. The skill must read Windframe MCP option resources, present available UI styles and color themes to the user, recommend the best choices for the user's intent, and wait for the user to choose before calling Windframe tools with uiStyle and primaryColor. Do not choose the UI style or primary color for the user.
-version: 1.0.0
+description: Use this skill when a user asks to generate, redesign, restyle, or convert web UI components or pages with the Windframe API. The skill must fetch live UI style options from the API, present available UI styles and practical color choices to the user, recommend the best choices for the user's intent, and wait for the user to choose before calling the design-context endpoint with uiStyle and primaryColor. Do not choose the UI style or primary color for the user.
 user-invocable: true
+compatibility: Requires WINDFRAME_API_KEY environment variable.
+metadata:
+  requires-env: WINDFRAME_API_KEY
 ---
 
-# Windframe MCP UI Skill
+# Overview
 
-Use Windframe MCP to get style context for production-ready web UI generation or conversion. Windframe provides style guidance through MCP resources; the MCP client generates the actual UI code in the user's project framework.
+Use the Windframe API to get style context for production-ready web UI generation or conversion. Windframe API provides style guidance through authenticated HTTP endpoints; the coding agent generates the actual UI code in the user's project framework.
 
-Core rule: never choose `uiStyle` or `primaryColor` on the user's behalf. Read the options from Windframe resources, recommend the best matches, ask the user to select, then call the tool with the selected values.
+You are to interact with it via a REST API at `https://mcp.windframe.dev/api`, with endpoints:
+- `GET /ui-styles` returns the currently available Windframe UI styles.
+- `POST /design-context` returns style context for a prompt, `uiStyle`, and `primaryColor`.
+
+And for Authorization use either `Authorization: Bearer $WINDRAME_API_KEY` or `x-api-key: $WINDRAME_API_KEY`
+
+
+**Core rule**: never choose `uiStyle` or `primaryColor` on the user's behalf. Fetch the live options from Windframe, recommend the best matches, ask the user to select, then call the API with the selected values.
+
+---
+
+## Prerequisites: API Key
+
+An API key created on [your account page](https://app.winframe.dev/account), store it in the `WINDFRAME_API_KEY` environment variable. Full keys are shown only once when created, so store them securely.
+
+**Required plan**: Active Pro or Team account
 
 ---
 
-## MCP Contract
-
-The Windframe MCP server is named `windframe-mcp`.
-
-Required resources:
-
-- `windframe://styles` returns the currently available Windframe UI styles.
-- `windframe://themes` returns the currently available Tailwind color themes as objects with `name` and `tailwindPrefix`.
-- `windframe://style-context/{context_id}` returns the full style context after a tool call.
-
-Required tools:
-
-- `fetch_style_design_context` is for a new UI component or page.
-- `fetch_style_conversion_context` is for converting an existing UI to another style.
-
-Both tools return a `resource_uri`. Always read that resource before generating or converting UI code.
-
----
 
 ## Mandatory Workflow
 
@@ -44,24 +43,48 @@ Extract the user's intent:
 - Project framework and styling stack when available.
 - Whether this is a new design or a conversion/restyle of an existing design.
 
-Ask only for missing details that materially affect the output. Style and color selection are always handled through the Windframe option flow below.
+Ask only for missing details that materially affect the output. Style and color selection are handled through the Windframe option flow below.
 
-### 2. Read Windframe Options
+### 2. Confirm API Access
 
-Before any Windframe tool call, read:
+Before calling the API, make sure an API key is available in the user's environment, secret store, or current instructions.
 
-- `windframe://styles`
-- `windframe://themes`
+Recommended environment variable:
 
-Treat these resources as authoritative. Do not rely on a hard-coded style list when the resources are available.
+```text
+WINDFRAME_API_KEY
+```
 
-### 3. Present Options And Recommendations
+If no key is available, ask the user to create one from the Windframe Account page and provide it through a secure local mechanism. Do not hard-code API keys into project files.
+
+### 3. Fetch Windframe Options
+
+Before requesting design context, call:
+
+```http
+GET https://mcp.windframe.dev/api/ui-styles
+Authorization: Bearer <WINDRAME_API_KEY>
+```
+
+Treat the response as authoritative. Do not rely on a hard-coded style list when the endpoint is available.
+
+The endpoint returns:
+
+```json
+{
+  "styles": ["..."]
+}
+```
+
+or backend-controlled style objects. Preserve whatever shape the API returns and use any metadata it provides for recommendations.
+
+### 4. Present Options And Recommendations
 
 Show the user a compact selection prompt:
 
-- List the available UI styles from `windframe://styles`.
-- List practical theme options from `windframe://themes`, or group them if the list is long.
-- Recommend up to three style/theme pairings that fit the user's request and the live resource data.
+- List or summarize the available UI styles returned by `/ui-styles`.
+- Offer practical primary color choices such as `"current"`, all Tailwind color names, or a valid custom hex value.
+- Recommend up to three style/color pairings that fit the user's request and the live API data.
 - Make clear that the user must choose the final `uiStyle` and `primaryColor`.
 
 Do not proceed until the user selects both values.
@@ -70,16 +93,16 @@ Example:
 
 > I read the current Windframe options.
 >
-> Available styles: [styles returned by windframe://styles]
-> Available themes: [themes returned by windframe://themes]
+> Available styles: [styles returned by /ui-styles]
+> Practical primary colors: current, blue, emerald, violet, rose, amber, or a custom hex value.
 >
 > For your request, I recommend:
-> 1. [live style] + [live theme]: [why it fits the user's intent and any live metadata].
-> 2. [live style] + [live theme]: [why it fits the user's intent and any live metadata].
+> 1. [live style] + blue: [why it fits].
+> 2. [live style] + emerald: [why it fits].
 >
 > Which style and primary color should I use?
 
-### 4. Build A Specific Prompt
+### 5. Build A Specific Prompt
 
 Write a detailed prompt for Windframe. Include:
 
@@ -90,72 +113,56 @@ Write a detailed prompt for Windframe. Include:
 - Interaction or state requirements.
 - Existing UI details when converting.
 
-### 5. Fetch Style Context
+### 6. Fetch Design Context
 
-For new UI, call `fetch_style_design_context` with:
+For both new UI and conversion/restyling, call:
+
+```http
+POST https://mcp.windframe.dev/api/design-context
+Authorization: Bearer <WINDRAME_API_KEY>
+Content-Type: application/json
+```
+
+Request body:
 
 ```json
 {
   "prompt": "Specific UI brief",
   "uiStyle": "User-selected style",
-  "primaryColor": "User-selected theme, current, or hex"
+  "primaryColor": "User-selected color, current, or hex"
 }
 ```
 
-For conversion or restyling, call `fetch_style_conversion_context` with:
+Required body fields are `prompt`, `uiStyle`, and `primaryColor`.
+
+The endpoint returns:
 
 ```json
 {
-  "prompt": "Specific conversion brief",
-  "uiStyle": "User-selected target style",
-  "primaryColor": "User-selected theme, current, or hex"
+  "context": {},
+  "fonts": {}
 }
 ```
 
-If a tool returns `user_input_required`, read the error, present the required options to the user, and retry only after the user chooses. Do not fill the missing values yourself.
-
-### 6. Read The Returned Resource
-
-The tool response has this shape:
-
-```json
-{
-  "status": "ready",
-  "resource_uri": "windframe://style-context/{context_id}",
-  "message": "Style context is ready. Access the full context via the resource URI above."
-}
-```
-
-Read `resource_uri`. Use the returned JSON style context to generate or convert UI code in the project framework.
+`fonts` may be omitted. Use the returned `context` and optional `fonts` to generate or convert UI code in the project framework.
 
 ### 7. Generate Or Convert The UI
 
-Use the style context as design guidance. Generate code that fits the user's existing project structure, component patterns, framework, and Tailwind setup.
+Use the design context as guidance. Generate code that fits the user's existing project structure, component patterns, framework, and Tailwind setup.
 
-Do not paste the raw style context as the final result unless the user explicitly asks for it.
-
----
-
-## Installation And Authentication
-
-Before using Windframe, verify that the MCP server is connected and exposes the required resources and tools.
-
-If it is not connected, add the HTTP MCP server:
-
-```bash
-claude mcp add --transport http windframe-mcp https://mcp.windframe.dev
-```
-
-Then restart the MCP client if needed. Authentication is handled through OAuth by the MCP transport. On first use, the user signs in through Windframe. Do not pass tokens or credentials into tool calls.
+Do not paste the raw design context as the final result unless the user explicitly asks for it.
 
 ---
 
 ## Errors
 
-- `user_input_required`: the MCP client cannot elicit interactively. Ask the user to choose `uiStyle` and `primaryColor`, then retry.
-- `cancelled`: the user cancelled interactive selection. Stop and ask how they want to proceed.
-- `pro_plan_required`: tell the user this Windframe feature requires Pro and point them to `https://windframe.dev/pricing`.
-- `free_pass_expired`: tell the user their free calls are exhausted and point them to `https://windframe.dev/pricing`.
+- `missing_api_key`: ask the user to provide a Windframe API key through a secure local mechanism.
+- `invalid_api_key`: ask the user to verify or recreate the API key.
+- `pro_plan_required`: tell the user this API feature requires Windframe Pro and point them to `https://windframe.dev/pricing`.
+- `api_key_validation_unavailable`: tell the user Windframe could not validate the key and retry later.
+- `ui_styles_unavailable`: tell the user style options could not be fetched and retry later.
+- `missing_required_body_fields`: include `prompt`, `uiStyle`, and `primaryColor`, then retry.
+- `design_context_unavailable`: tell the user design context could not be generated and retry later.
 
 ---
 
@@ -163,13 +170,14 @@ Then restart the MCP client if needed. Authentication is handled through OAuth b
 
 Before finishing:
 
+- API access was handled through a secure key source, not hard-coded project files.
+- Style options came from `GET /ui-styles`.
 - The style and primary color were chosen by the user.
-- Options came from `windframe://styles` and `windframe://themes`.
-- The returned `windframe://style-context/{context_id}` resource was read.
+- `POST /design-context` returned design context successfully.
 - The generated UI matches the user's framework and existing project conventions.
 - Required sections, content, states, and interactions are present.
 - No placeholder content remains unless the user requested placeholders.
-- The result follows the selected Windframe style and theme.
+- The result follows the selected Windframe style and primary color.
 
 ---
 
@@ -177,7 +185,5 @@ Before finishing:
 
 | File | When to read |
 |------|-------------|
-| [references/tools.md](references/tools.md) | Tool parameters, resources, responses, and errors |
-| [references/styles.md](references/styles.md) | Style and theme recommendation guidance |
-| [references/anti-patterns.md](references/anti-patterns.md) | Mistakes to avoid |
-| [references/workflow.md](references/workflow.md) | End-to-end usage example |
+| [references/styles.md](references/styles.md) | Primary color handling and style recommendation guidance |
+| [references/anti-patterns.md](references/anti-patterns.md) | Mistakes to avoid with the HTTP API workflow |

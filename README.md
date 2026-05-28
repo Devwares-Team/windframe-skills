@@ -1,15 +1,16 @@
-# Windframe Skill
+# Windframe Agent Skills
 
-Windframe Skill helps your coding agent build better web interfaces by connecting it to Windframe MCP. Instead of guessing spacing, typography, colors, and component patterns from generic training data, your agent can request live design-system context from Windframe and use it while generating UI in your project.
+[Windframe](https://sleek.design) Agent Skill helps your coding agent build better web interfaces by fetching live design-system context from the Windframe API authenticated HTTP endpoints on `https://mcp.windframe.dev/api` with a Windframe API key.
 
-Use it for landing pages, dashboards, admin panels, SaaS screens, marketing pages, UI components, and restyling existing interfaces.
+Use it for creating and restyling existing web interfaces.
 
 ## What It Does
 
 Windframe Skill gives your agent a workflow for UI generation:
 
-- fetches Windframe style context for design direction
+- fetches the current Windframe style catalog from the API
 - recommends useful style and color directions based on your request
+- fetches design context for the selected style and primary color
 - helps the agent generate production-ready UI in your project
 
 ## Install
@@ -26,32 +27,37 @@ Or clone the skill manually:
 
 ```bash
 git clone https://github.com/Devwares-Team/windframe-skill ~/.claude/skills/windframe
-
 ```
 
-## Windframe MCP
+## Windframe API and Its Requirements
+Base URL:
 
-Windframe MCP is the server behind the skill. It plugs into MCP-compatible coding agents and gives them access to design tokens, Tailwind styling guidance, components, and style context.
+```text
+https://mcp.windframe.dev/api
+```
 
-The skill is the local instruction layer. Windframe MCP is the live design-system backend.
+Endpoints:
 
-Official MCP page: https://windframe.dev/mcp
+- `GET /ui-styles` returns the currently available Windframe UI styles.
+- `POST /design-context` returns style context for a prompt, `uiStyle`, and `primaryColor`.
 
-Windframe MCP endpoint: https://mcp.windframe.dev/mcp
+Requirents:
+- A [Windframe](https://windframe.dev) account on the Pro or Team plan
+- An API key created on [your account page](https://app.winframe.dev/account), stored in the `WINDFRAME_API_KEY` environment variable. Full keys are shown only once when created, so store them securely.
 
 
 ## What's Inside
 
-`SKILL.md` — core Windframe workflow
+`SKILL.md` - core Windframe API workflow
 
 - when to use the skill
-- how the agent should read live MCP resources
+- how the agent should call Windframe API endpoints
 - how style and color selection should work
 - how to fetch and apply Windframe style context
 
 Reference guides:
 
-- `references/workflow.md` — end-to-end dynamic workflow
-- `references/tools.md` — MCP resources, tools, parameters, and errors
-- `references/styles.md` — live style and theme selection process
-- `references/anti-patterns.md` — mistakes to avoid
+- `references/workflow.md` - end-to-end API workflow
+- `references/tools.md` - API endpoints, request bodies, responses, and errors
+- `references/styles.md` - live style and color selection process
+- `references/anti-patterns.md` - mistakes to avoid
